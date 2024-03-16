@@ -1,0 +1,18 @@
+EpochConv
+
+Epoch Converter
+
+`EpochConv` for a buffer to convert between epoch and datetime
+
+Default keybindings in the buffer
+  + g0: reset all using *datetime or now*
+  + g1: convert epoch to datetime
+  + g2: convert datetime to epoch
+  + g3: assign epoch to datetime
+  + g4: assign datetime to epoch
+  + g5: set epoch to now
+
+See also:
+  + https://github.com/bartek/epochconverter.nvim
+  + https://github.com/hlucco/nvim-eswpoch
+  + https://superuser.com/questions/590133
