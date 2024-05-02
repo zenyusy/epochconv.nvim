@@ -186,7 +186,8 @@ function M.toggle()
             return
         end
         vim.api.nvim_buf_set_name(M.b, "EpochConv")
-        vim.api.nvim_buf_set_option(M.b, "buftype", "nofile")
+        vim.api.nvim_set_option_value("buftype", "nofile", {buf=M.b})
+        vim.api.nvim_set_option_value("swapfile", false, {buf=M.b})
         vim.keymap.set("n", "g0", M.resetall, {buffer = M.b, noremap = true, silent = true, nowait = true})
         vim.keymap.set("n", "g1", M.convts, {buffer = M.b, noremap = true, silent = true, nowait = true})
         vim.keymap.set("n", "g2", M.convdt, {buffer = M.b, noremap = true, silent = true, nowait = true})
