@@ -3,20 +3,35 @@ local M = {
     ts = 0, -- ms
     dt = 0, -- sec
     offset = nil,
+    tsline = 0, -- zero based line number of `tsprompt`
+    dtline = nil, -- `setup()`
 
-    instructions = "0=reset  5=now",
-    tsprompt     = "[1] ts:    ",
+    tsprompt     = "[1]ts:     ", -- `tsline`
     tssec        = "sec:       ",
     tsms         = "msec:      ",
     tsloc        = "local:     ",
     tsutc        = "utc:       ",
-    hr           = "3=ts  4=dt ----------------",
-    dtprompt     = "[2] dt:    ",
+    hr           = "3↓  4↑ ----------------",
+    dtprompt     = "[2]dt:     ",
     dtsec        = "sec:       ",
     dtms         = "msec:      ",
     dtloc        = "local:     ",
-    dtutc        = "utc:       "
+    dtutc        = "utc:       ",
+    instructions = "  (0=reset  5=now)"
 }
+
+function M.setlines(j, prompt, ...)
+    local content
+    if prompt then
+        content = {prompt}
+        for _, v in ipairs({...}) do
+            table.insert(content, v)
+        end
+    else
+        content = {...}
+    end
+    vim.api.nvim_buf_set_lines(M.b, j - #content, j, false, content)
+end
 
 function M.get_utc_and_loc(s, ms)
     local m = string.format(".%03d", ms)
@@ -30,50 +45,35 @@ function M.resetall()
     end
     local utc, loc, dt = M.get_utc_and_loc(M.dt, 0)
     M.ts = M.dt * 1000
-    vim.api.nvim_buf_set_lines(
-        M.b,
-        0,
-        12,
-        false,
-        {
-            M.instructions,
-            M.tsprompt .. M.ts,
-            M.tssec .. M.dt,
-            M.tsms .. M.ts,
-            M.tsloc .. loc,
-            M.tsutc .. utc,
-            M.hr,
-            M.dtprompt .. dt,
-            M.dtsec .. M.dt,
-            M.dtms .. M.ts,
-            M.dtloc .. loc,
-            M.dtutc .. utc
-        }
+    M.setlines(12, nil,
+        M.tsprompt .. M.ts,
+        M.tssec .. M.dt,
+        M.tsms .. M.ts,
+        M.tsloc .. loc,
+        M.tsutc .. utc,
+        M.hr,
+        M.dtprompt .. dt,
+        M.dtsec .. M.dt,
+        M.dtms .. M.ts,
+        M.dtloc .. loc,
+        M.dtutc .. utc,
+        M.instructions
     )
 end
 
 function M.updatets(setprompt)
-    if setprompt then
-        vim.api.nvim_buf_set_lines(M.b, 1, 2, false, {M.tsprompt .. M.ts})
-    end
     local s = math.floor(M.ts / 1000)
     local utc, loc = M.get_utc_and_loc(s, M.ts % 1000)
-    vim.api.nvim_buf_set_lines(
-        M.b,
-        2,
-        6,
-        false,
-        {
-            M.tssec .. s,
-            M.tsms .. M.ts,
-            M.tsloc .. loc,
-            M.tsutc .. utc
-        }
+    M.setlines(M.tsline + 5, setprompt and M.tsprompt .. M.ts,
+        M.tssec .. s,
+        M.tsms .. M.ts,
+        M.tsloc .. loc,
+        M.tsutc .. utc
     )
 end
 
 function M.convts()
-    local line = vim.api.nvim_buf_get_lines(M.b, 1, 2, false)
+    local line = vim.api.nvim_buf_get_lines(M.b, M.tsline, M.tsline + 1, false)
     if #line ~= 1 then
         vim.api.nvim_err_writeln("EpochConv failed to get ts")
         return
@@ -97,25 +97,16 @@ end
 
 function M.updatedt(setprompt)
     local utc, loc, dt = M.get_utc_and_loc(M.dt, 0)
-    if setprompt then
-        vim.api.nvim_buf_set_lines(M.b, 7, 8, false, {M.dtprompt .. dt})
-    end
-    vim.api.nvim_buf_set_lines(
-        M.b,
-        8,
-        12,
-        false,
-        {
-            M.dtsec .. M.dt,
-            M.dtms .. M.dt .. "000",
-            M.dtloc .. loc,
-            M.dtutc .. utc
-        }
+    M.setlines(M.dtline + 5, setprompt and M.dtprompt .. dt,
+        M.dtsec .. M.dt,
+        M.dtms .. M.dt .. "000",
+        M.dtloc .. loc,
+        M.dtutc .. utc
     )
 end
 
 function M.convdt()
-    local line = vim.api.nvim_buf_get_lines(M.b, 7, 8, false)
+    local line = vim.api.nvim_buf_get_lines(M.b, M.dtline, M.dtline + 1, false)
     if #line ~= 1 then
         vim.api.nvim_err_writeln("EpochConv failed to get dt")
         return
@@ -135,7 +126,7 @@ function M.convdt()
                 dttable.day >= 1 and dttable.day <= 31 and
                 dttable.hour >= 0 and dttable.hour <= 23 and
                 dttable.sec >= 0 and dttable.sec <= 59
-         then
+        then
             M.dt = math.floor(os.time(dttable))
         else
             vim.api.nvim_err_writeln("EpochConv got invalid dt")
@@ -203,6 +194,7 @@ function M.setup()
         vim.api.nvim_create_user_command("EpochConv", M.toggle, {desc = "toggle Epoch Conv"})
         local now = os.time()
         M.offset = math.floor(os.difftime(now, os.time(os.date("!*t", now))))
+        M.dtline = M.tsline + 6
     end
 end
 
