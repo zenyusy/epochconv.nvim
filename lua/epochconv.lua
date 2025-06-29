@@ -1,4 +1,5 @@
 local M = {
+    dfmt = "%Y-%m-%d %H:%M:%S",
     b = 0,
     ts = 0, -- ms
     dt = 0, -- sec
@@ -12,7 +13,7 @@ local M = {
     tsms         = "msec:      ",
     tsloc        = "local:     ",
     tsutc        = "utc:       ",
-    hr           = "3↓  4↑ ----------------",
+    hr           = "3↓  4↑ ---------------- 6⋀  7⋁",
     dtprompt     = "[2]dt:     ",
     dtsec        = "sec:       ",
     dtms         = "msec:      ",
@@ -36,8 +37,16 @@ end
 
 function M.get_utc_and_loc(s, ms)
     local m = string.format(".%03d", ms)
-    local dt = os.date("%Y-%m-%d %H:%M:%S", s)
-    return os.date("%a %Y-%m-%d %H:%M:%S", s - M.offset) .. m, os.date("%a ", s) .. dt .. m, dt
+    local dt = os.date(M.dfmt, s)
+    return os.date("%a " .. M.dfmt, s - M.offset) .. m, os.date("%a ", s) .. dt .. m, dt
+end
+
+function M.archive(s, ms)
+    local l = vim.api.nvim_buf_line_count(M.b)
+    local dfmt = " ; " .. M.dfmt
+    vim.api.nvim_buf_set_lines(M.b, l, l, false, {
+        string.format("%10d", s) .. string.format("%03d", ms) .. os.date(dfmt, s) .. os.date(dfmt, s - M.offset)
+    })
 end
 
 function M.resetall()
@@ -170,6 +179,18 @@ function M.tsnow()
     M.updatets(true)
 end
 
+function M.tsarchive()
+    if M.ts ~= 0 then
+        M.archive(math.floor(M.ts / 1000), M.ts % 1000)
+    end
+end
+
+function M.dtarchive()
+    if M.dt ~= 0 then
+        M.archive(M.dt, 0)
+    end
+end
+
 function M.show()
     vim.api.nvim_open_win(M.b, true, {split = "right"})
     -- vim.api.nvim_set_option_value('winfixwidth', true, {win=ret})
@@ -198,6 +219,8 @@ function M.toggle()
         vim.keymap.set("n", "g3", M.ts2dt, {buffer = M.b, noremap = true, silent = true, nowait = true})
         vim.keymap.set("n", "g4", M.dt2ts, {buffer = M.b, noremap = true, silent = true, nowait = true})
         vim.keymap.set("n", "g5", M.tsnow, {buffer = M.b, noremap = true, silent = true, nowait = true})
+        vim.keymap.set("n", "g6", M.tsarchive, {buffer = M.b, noremap = true, silent = true, nowait = true})
+        vim.keymap.set("n", "g7", M.dtarchive, {buffer = M.b, noremap = true, silent = true, nowait = true})
         M.show()
     end
 end

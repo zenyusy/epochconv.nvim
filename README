@@ -11,6 +11,8 @@ Default keybindings in the buffer
   + g3: assign epoch to datetime
   + g4: assign datetime to epoch
   + g5: set epoch to now
+  + g6: archive epoch
+  + g7: archive datetime
 
 See also:
   + https://github.com/bartek/epochconverter.nvim
