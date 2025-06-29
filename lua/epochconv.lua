@@ -6,7 +6,8 @@ local M = {
     tsline = 0, -- zero based line number of `tsprompt`
     dtline = nil, -- `setup()`
 
-    tsprompt     = "[1]ts:     ", -- `tsline`
+    tsprefix     = "[1]ts:",
+    tsprompt     = "", -- `tsline`
     tssec        = "sec:       ",
     tsms         = "msec:      ",
     tsloc        = "local:     ",
@@ -64,7 +65,19 @@ end
 function M.updatets(setprompt)
     local s = math.floor(M.ts / 1000)
     local utc, loc = M.get_utc_and_loc(s, M.ts % 1000)
-    M.setlines(M.tsline + 5, setprompt and M.tsprompt .. M.ts,
+    local newprompt = nil
+    if setprompt then
+        local line = vim.api.nvim_buf_get_lines(M.b, M.tsline, M.tsline + 1, false)
+        if #line == 1 then
+            local l = line[1]
+            if l:sub(1, #M.tsprefix) == M.tsprefix then
+                newprompt = M.tsprompt .. M.ts .. " " .. l:sub(#M.tsprefix+1):gsub("^%s+", "")
+            else
+                newprompt = M.tsprompt .. M.ts .. " " .. l:gsub("^%s+", "")
+            end
+        end
+    end
+    M.setlines(M.tsline + 5, newprompt,
         M.tssec .. s,
         M.tsms .. M.ts,
         M.tsloc .. loc,
@@ -194,6 +207,7 @@ function M.setup()
         vim.api.nvim_create_user_command("EpochConv", M.toggle, {desc = "toggle Epoch Conv"})
         local now = os.time()
         M.offset = math.floor(os.difftime(now, os.time(os.date("!*t", now))))
+        M.tsprompt = M.tsprefix .. "     "
         M.dtline = M.tsline + 6
     end
 end
